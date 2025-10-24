@@ -10,7 +10,7 @@ st.title("⚽ Football Prediction Web App")
 st.write("Analyze fixtures, predict results, and explore league insights.")
 
 # --- API Key ---
-API_KEY = st.secrets["ee05c363c340418487afbea9cbd77d71"]
+API_KEY = st.secrets[ee05c363c340418487afbea9cbd77d71]
 
 # --- Sidebar filters ---
 st.sidebar.header("⚙️ Prediction Filters")
