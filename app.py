@@ -8,8 +8,6 @@ st.set_page_config(page_title="⚽ Football Predictor", layout="wide")
 
 st.title("⚽ Football Prediction Web App")
 st.write("Analyze fixtures, predict results, and explore league insights.")
-st.sidebar.write("🔐 Secrets Loaded:", list(st.secrets.keys()))
-
 
 # --- API Key ---
 API_KEY = st.secrets["ee05c363c340418487afbea9cbd77d71"]
