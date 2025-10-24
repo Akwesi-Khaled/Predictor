@@ -50,7 +50,9 @@ TOP_LEAGUES = [
     "Belgian Pro League", "Swiss Super League", "Russian Premier League", "A-League"
 ]
 
-league_id, league_label = None, None
+# ✅ Always define them first (prevents NameError)
+league_id = None
+league_label = "No league selected"
 
 try:
     leagues_data = fetch_data("leagues", params={"season": season_input})
@@ -70,35 +72,33 @@ try:
             label = f"{country_name} — {league_name}"
             league_options.append((league_id_val, label))
 
-    if not league_options:
-        st.sidebar.warning("⚠️ No top leagues found for this season.")
-        st.stop()
-
-    league_options = sorted(league_options, key=lambda x: x[1])
-
-    league_choice = st.sidebar.selectbox(
-        "Select a League",
-        options=league_options,
-        format_func=lambda x: x[1]
-    )
-
-    if league_choice:
+    if league_options:
+        league_options = sorted(league_options, key=lambda x: x[1])
+        league_choice = st.sidebar.selectbox(
+            "Select a League",
+            options=league_options,
+            format_func=lambda x: x[1],
+        )
         league_id = league_choice[0]
         league_label = league_choice[1]
+    else:
+        st.sidebar.warning("⚠️ No top leagues found for this season.")
 
 except Exception as e:
     st.sidebar.error(f"Failed to load leagues: {e}")
-    st.stop()
 
 # -----------------------------------------------------------
 # ⚽ FIXTURES + PREDICTIONS
 # -----------------------------------------------------------
-if league_id and league_label:
+if league_id:
     st.subheader(f"⚽ Fixtures for {league_label} — {selected_date}")
 
-    fixtures = []
     try:
-        fixtures_data = fetch_data("fixtures", params={"league": league_id, "season": season_input, "date": selected_date})
+        fixtures_data = fetch_data("fixtures", params={
+            "league": league_id,
+            "season": season_input,
+            "date": selected_date
+        })
         fixtures = fixtures_data.get("response", []) if isinstance(fixtures_data, dict) else []
 
         if not fixtures:
@@ -113,7 +113,7 @@ if league_id and league_label:
 
                 st.markdown(f"### {home} 🆚 {away}")
 
-                # 🧩 Fetch prediction for the fixture
+                # 🔮 Prediction
                 prediction_data = fetch_data("predictions", params={"fixture": fixture_id})
                 prediction = prediction_data.get("response", [])
                 if prediction:
