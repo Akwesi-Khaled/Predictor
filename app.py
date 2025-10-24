@@ -26,55 +26,37 @@ season_input = st.sidebar.number_input("Season (year)", min_value=2000, max_valu
 
 # We'll fetch leagues list (cached)
 st.sidebar.header("🏆 League Selector")
+# --- FETCH FIXTURES FOR SELECTED LEAGUE ---
+st.subheader(f"⚽ Fixtures for {league_label} ({selected_date})")
 
-# Define the top 20 major leagues (based on popularity & coverage in API-Football)
-TOP_LEAGUES = [
-    "Premier League", "Championship", "La Liga", "Serie A", "Bundesliga",
-    "Ligue 1", "Eredivisie", "Primeira Liga", "Scottish Premiership", "MLS",
-    "Brasileirão Serie A", "Argentine Liga Profesional", "Saudi Pro League",
-    "UEFA Champions League", "UEFA Europa League", "Turkish Super Lig",
-    "Belgian Pro League", "Swiss Super League", "Russian Premier League", "A-League"
-]
-
+fixtures = []
 try:
-    leagues_data = client.get_leagues(season=season_input)
-    leagues_resp = leagues_data.get("response", []) if isinstance(leagues_data, dict) else []
+    fixtures_data = client.get_fixtures(league=league_id, date=selected_date)
+    fixtures = fixtures_data.get("response", []) if isinstance(fixtures_data, dict) else []
 
-    league_options = []
-    for l in leagues_resp:
-        if not isinstance(l, dict) or "league" not in l:
-            continue
-        league_obj = l["league"]
-        country_obj = l.get("country", {})
-        league_name = league_obj.get("name", "")
-        country_name = country_obj.get("name", "")
-        league_id = league_obj.get("id")
+    if not fixtures:
+        st.warning("No fixtures available for the selected date.")
+    else:
+        for fixture in fixtures:
+            teams = fixture["teams"]
+            home = teams["home"]["name"]
+            away = teams["away"]["name"]
+            fixture_id = fixture["fixture"]["id"]
 
-        # Filter to only major leagues
-        if league_name in TOP_LEAGUES and league_id:
-            label = f"{country_name} — {league_name}"
-            league_options.append((league_id, label))
+            st.markdown(f"### {home} vs {away}")
 
-    if not league_options:
-        st.sidebar.warning("⚠️ No top leagues found for this season.")
-        st.stop()
-
-    # Sort alphabetically for neatness
-    league_options = sorted(league_options, key=lambda x: x[1])
-
-    # Single-league selector
-    league_choice = st.sidebar.selectbox(
-        "Select a League",
-        options=league_options,
-        format_func=lambda x: x[1]
-    )
-
-    league_id = league_choice[0]
-    league_label = league_choice[1]
+            # Fetch prediction for each fixture
+            prediction_data = client.get_prediction(fixture_id)
+            prediction = prediction_data.get("response", [])
+            if prediction:
+                pred = prediction[0]
+                advice = pred.get("advice", "No prediction available")
+                st.info(f"**Prediction:** {advice}")
+            else:
+                st.write("No prediction data available.")
 
 except Exception as e:
-    st.sidebar.error(f"Failed to load leagues: {e}")
-    st.stop()
+    st.error(f"Error fetching fixtures: {e}")
 
 
 # Filters
