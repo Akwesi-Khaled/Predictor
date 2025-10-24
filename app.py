@@ -23,28 +23,59 @@ client = APISportsClient(API_KEY)
 st.sidebar.header("Date & League")
 selected_date = st.sidebar.date_input("Select date", value=date.today())
 season_input = st.sidebar.number_input("Season (year)", min_value=2000, max_value=2100, value=date.today().year)
+
 # We'll fetch leagues list (cached)
-with st.sidebar.expander("League selector"):
-    try:
-        leagues_data = client.get_leagues(season=season_input)
-        # leagues_data may have structure: {"response": [...]}
-        leagues_resp = leagues_data.get("response", []) if isinstance(leagues_data, dict) else []
-        choices = []
-        for l in leagues_resp:
-            # different versions return nested structures
-            if isinstance(l, dict) and "league" in l:
-                league_obj = l["league"]
-                choices.append((league_obj.get("id"), f'{league_obj.get("name")} ({league_obj.get("country")})'))
-            elif "name" in l and "id" in l:
-                choices.append((l.get("id"), l.get("name")))
-        if not choices:
-            # fallback: try parsing when api returns list of competitions
-            choices = [(c.get("id"), f'{c.get("name")} ({c.get("area", {}).get("name","")})') for c in leagues_data.get("response", [])]
-        league_choice = st.selectbox("League (optional)", options=[None] + choices, format_func=lambda x: "All Leagues" if x is None else x[1])
-        # user will get tuple or None
-    except Exception as e:
-        st.sidebar.error(f"Failed to load leagues: {e}")
-        league_choice = None
+st.sidebar.header("🏆 League Selector")
+
+# Define the top 20 major leagues (based on popularity & coverage in API-Football)
+TOP_LEAGUES = [
+    "Premier League", "Championship", "La Liga", "Serie A", "Bundesliga",
+    "Ligue 1", "Eredivisie", "Primeira Liga", "Scottish Premiership", "MLS",
+    "Brasileirão Serie A", "Argentine Liga Profesional", "Saudi Pro League",
+    "UEFA Champions League", "UEFA Europa League", "Turkish Super Lig",
+    "Belgian Pro League", "Swiss Super League", "Russian Premier League", "A-League"
+]
+
+try:
+    leagues_data = client.get_leagues(season=season_input)
+    leagues_resp = leagues_data.get("response", []) if isinstance(leagues_data, dict) else []
+
+    league_options = []
+    for l in leagues_resp:
+        if not isinstance(l, dict) or "league" not in l:
+            continue
+        league_obj = l["league"]
+        country_obj = l.get("country", {})
+        league_name = league_obj.get("name", "")
+        country_name = country_obj.get("name", "")
+        league_id = league_obj.get("id")
+
+        # Filter to only major leagues
+        if league_name in TOP_LEAGUES and league_id:
+            label = f"{country_name} — {league_name}"
+            league_options.append((league_id, label))
+
+    if not league_options:
+        st.sidebar.warning("⚠️ No top leagues found for this season.")
+        st.stop()
+
+    # Sort alphabetically for neatness
+    league_options = sorted(league_options, key=lambda x: x[1])
+
+    # Single-league selector
+    league_choice = st.sidebar.selectbox(
+        "Select a League",
+        options=league_options,
+        format_func=lambda x: x[1]
+    )
+
+    league_id = league_choice[0]
+    league_label = league_choice[1]
+
+except Exception as e:
+    st.sidebar.error(f"Failed to load leagues: {e}")
+    st.stop()
+
 
 # Filters
 st.sidebar.header("Prediction Filters")
